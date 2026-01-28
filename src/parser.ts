@@ -4,6 +4,7 @@ import type {
   FunctionDeclaration,
   Identifier,
   ParameterDeclaration,
+  ReturnStatement,
   SourceFile,
   Statement,
   VariableStatement,
@@ -11,9 +12,17 @@ import type {
 import { SyntaxKind } from './ast';
 import { createScanner } from './scanner';
 
+export enum ScopeFlags {
+  None = 0,
+  InFunction = 1 << 0,
+  InIteration = 1 << 1,
+  InSwitch = 1 << 2,
+}
+
 export function createParser(text: string) {
   const scanner = createScanner(text);
   let token: SyntaxKind;
+  let scopeFlags = ScopeFlags.None;
 
   return {
     parseSourceFile,
@@ -54,6 +63,8 @@ export function createParser(text: string) {
         return parseFunctionDeclaration();
       case SyntaxKind.OpenBraceToken:
         return parseBlock();
+      case SyntaxKind.ReturnKeyword:
+        return parseReturnStatement();
     }
     return {
       kind: SyntaxKind.ExpressionStatement,
@@ -130,7 +141,10 @@ export function createParser(text: string) {
 
     expect(SyntaxKind.CloseParenToken);
 
+    const saveScopeFlags = scopeFlags;
+    scopeFlags |= ScopeFlags.InFunction;
     const body = parseBlock();
+    scopeFlags = saveScopeFlags;
 
     return {
       kind: SyntaxKind.FunctionDecl,
@@ -162,6 +176,26 @@ export function createParser(text: string) {
       pos,
       end: scanner.getTokenPos(),
       statements,
+      _statementBrand: null,
+    };
+  }
+
+  function parseReturnStatement(): ReturnStatement {
+    if ((scopeFlags & ScopeFlags.InFunction) === 0) {
+      throw new Error('return 语句只能在函数体中使用');
+    }
+    const pos = scanner.getTokenPos();
+    nextToken(); // return
+    let expression: Expression | undefined;
+    if (curToken() !== SyntaxKind.SemicolonToken) {
+      expression = parseExpression();
+    }
+    expect(SyntaxKind.SemicolonToken);
+    return {
+      kind: SyntaxKind.ReturnStatement,
+      pos,
+      end: scanner.getTokenPos(),
+      expression,
       _statementBrand: null,
     };
   }

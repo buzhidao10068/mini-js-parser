@@ -127,3 +127,8 @@ export interface Block extends Statement {
   kind: SyntaxKind.Block;
   statements: Statement[];
 }
+
+export interface ReturnStatement extends Statement {
+  kind: SyntaxKind.ReturnStatement;
+  expression?: Expression;
+}

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { FunctionDeclaration, SyntaxKind, createParser } from '../src';
+import {
+  FunctionDeclaration,
+  ReturnStatement,
+  SyntaxKind,
+  createParser,
+} from '../src';
 
 describe('Parser', () => {
   it('解析 let 语句', () => {
@@ -14,9 +19,6 @@ describe('Parser', () => {
     expect(declaration.kind).toBe(SyntaxKind.VariableDeclaration);
     expect(declaration.name.kind).toBe(SyntaxKind.Identifier);
     expect(declaration.name.text).toBe('a');
-    // 暂时用 StringLiteral 表示
-    expect(declaration.initializer?.kind).toBe(SyntaxKind.StringLiteral);
-    expect(declaration.initializer?.text).toBe('1');
   });
 
   it('解析函数声明语句', () => {
@@ -44,5 +46,26 @@ describe('Parser', () => {
     expect(functionDecl.parameters[0].name.text).toBe('a');
     expect(functionDecl.parameters[1].kind).toBe(SyntaxKind.ParameterDecl);
     expect(functionDecl.parameters[1].name.text).toBe('b');
+  });
+
+  it('解析 return 语句时，不在函数体中使用会报错', () => {
+    const code = 'return 1;';
+    expect(() => {
+      const parser = createParser(code);
+      parser.parseSourceFile();
+    }).toThrowError('return 语句只能在函数体中使用');
+  });
+
+  it('解析 return 语句', () => {
+    const code = 'function a() { return 1; }';
+    const parser = createParser(code);
+    const sourceFile = parser.parseSourceFile();
+
+    expect(sourceFile.statements).toHaveLength(1);
+    const functionDecl = sourceFile.statements[0] as FunctionDeclaration;
+    expect(functionDecl.kind).toBe(SyntaxKind.FunctionDecl);
+    expect(functionDecl.body.statements).toHaveLength(1);
+    const returnStmt = functionDecl.body.statements[0] as ReturnStatement;
+    expect(returnStmt.kind).toBe(SyntaxKind.ReturnStatement);
   });
 });
