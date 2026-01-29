@@ -2,6 +2,7 @@ import { SyntaxKind } from './ast';
 
 export const enum OperatorPrecedence {
   Comma,
+  Assignment,
   Equality,
   Relational,
   Additive,
@@ -16,6 +17,8 @@ export function getOperatorPrecedence(
   switch (operator) {
     case SyntaxKind.CommaToken:
       return OperatorPrecedence.Comma;
+    case SyntaxKind.EqualsToken:
+      return OperatorPrecedence.Assignment;
     case SyntaxKind.EqualsEqualsToken:
       return OperatorPrecedence.Equality;
     case SyntaxKind.LessThanToken:

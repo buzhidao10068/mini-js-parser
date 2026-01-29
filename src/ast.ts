@@ -143,6 +143,13 @@ export interface ForStatement extends Statement {
   statement: Statement;
 }
 
+export interface IfStatement extends Statement {
+  kind: SyntaxKind.IfStatement;
+  expression: Expression;
+  thenStatement: Statement;
+  elseStatement?: Statement;
+}
+
 export interface ReturnStatement extends Statement {
   kind: SyntaxKind.ReturnStatement;
   expression?: Expression;

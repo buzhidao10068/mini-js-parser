@@ -6,6 +6,7 @@ import type {
   ForStatement,
   FunctionDeclaration,
   Identifier,
+  IfStatement,
   LiteralExpression,
   ParameterDeclaration,
   PostfixUnaryExpression,
@@ -18,7 +19,7 @@ import type {
 } from './ast';
 import { SyntaxKind } from './ast';
 import { createScanner } from './scanner';
-import { getOperatorPrecedence } from './utilities';
+import { getOperatorPrecedence, OperatorPrecedence } from './utilities';
 
 export enum ScopeFlags {
   None = 0,
@@ -75,6 +76,8 @@ export function createParser(text: string) {
         return parseWhileStatement();
       case SyntaxKind.ForKeyword:
         return parseForStatement();
+      case SyntaxKind.IfKeyword:
+        return parseIfStatement();
       case SyntaxKind.ReturnKeyword:
         return parseReturnStatement();
     }
@@ -246,6 +249,29 @@ export function createParser(text: string) {
     };
   }
 
+  function parseIfStatement(): IfStatement {
+    const pos = scanner.getTokenPos();
+    nextToken(); // if
+    expect(SyntaxKind.OpenParenToken);
+    const expression = parseExpression();
+    expect(SyntaxKind.CloseParenToken);
+    const thenStatement = parseStatement();
+    let elseStatement: Statement | undefined;
+    if (curToken() === SyntaxKind.ElseKeyword) {
+      nextToken();
+      elseStatement = parseStatement();
+    }
+    return {
+      kind: SyntaxKind.IfStatement,
+      pos,
+      end: elseStatement ? elseStatement.end : thenStatement.end,
+      expression,
+      thenStatement,
+      elseStatement,
+      _statementBrand: null,
+    };
+  }
+
   function parseReturnStatement(): ReturnStatement {
     if ((scopeFlags & ScopeFlags.InFunction) === 0) {
       throw new Error('return 语句只能在函数体中使用');
@@ -280,7 +306,7 @@ export function createParser(text: string) {
   }
 
   function parseExpression(): Expression {
-    return parseBinaryExpression(0);
+    return parseBinaryExpression(OperatorPrecedence.Lowest);
   }
 
   function parseBinaryExpression(minPrecedence: number): Expression {
@@ -290,7 +316,10 @@ export function createParser(text: string) {
       const operatorToken = curToken();
       const precedence = getOperatorPrecedence(operatorToken);
 
-      if (precedence === 0 || precedence < minPrecedence) {
+      if (
+        precedence === OperatorPrecedence.Lowest ||
+        precedence < minPrecedence
+      ) {
         break;
       }
 
@@ -360,8 +389,7 @@ export function createParser(text: string) {
   function parsePrimaryExpression(): Expression {
     const pos = scanner.getTokenPos();
     if (curToken() === SyntaxKind.Identifier) {
-      const id = parseIdentifier();
-      return id;
+      return parseIdentifier();
     } else if (curToken() === SyntaxKind.NumericLiteral) {
       const val = parseFloat(scanner.getTokenValue());
       const text = scanner.getTokenText();
@@ -426,7 +454,9 @@ export function createParser(text: string) {
 
   function parseSemicolon() {
     if (curToken() !== SyntaxKind.SemicolonToken) {
-      throw new Error('变量声明语句必须以分号结尾');
+      throw new Error(
+        `位置 ${scanner.getTokenPos()} 变量声明语句必须以分号结尾, 但得到 ${SyntaxKind[curToken()]}.`,
+      );
     }
     nextToken();
   }

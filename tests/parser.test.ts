@@ -145,9 +145,50 @@ describe('Parser', () => {
       expect(initializerExpr.text).toBe('0');
       expect(initializerExpr.value).toBe(0);
     });
+
+    it('解析 if else 语句', () => {
+      const code = `
+    if (a) {
+      x = 1;
+    } else if (b) {
+      x = 2;
+    } else {
+      x = 3;
+    }`;
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+      const stmt = sourceFile.statements[0] as any;
+      expect(stmt.kind).toBe(SyntaxKind.IfStatement);
+
+      const nestedIf = stmt.elseStatement;
+      expect(nestedIf.kind).toBe(SyntaxKind.IfStatement);
+      expect(nestedIf.expression.text).toBe('b');
+
+      const finalElse = nestedIf.elseStatement;
+      expect(finalElse.kind).toBe(SyntaxKind.Block);
+    });
   });
 
   describe('解析表达式', () => {
+    it('解析赋值表达式', () => {
+      const code = 'x = 1;';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+      expect(sourceFile.statements).toHaveLength(1);
+      const stmt = sourceFile.statements[0] as ExpressionStatement;
+      expect(stmt.kind).toBe(SyntaxKind.ExpressionStatement);
+      const expression = stmt.expression as BinaryExpression;
+      expect(expression.kind).toBe(SyntaxKind.BinaryExpression);
+      expect(expression.operatorToken.kind).toBe(SyntaxKind.EqualsToken);
+      const left = expression.left as LiteralExpression;
+      expect(left.kind).toBe(SyntaxKind.Identifier);
+      expect(left.text).toBe('x');
+      const right = expression.right as LiteralExpression;
+      expect(right.kind).toBe(SyntaxKind.NumericLiteral);
+      expect(right.text).toBe('1');
+      expect(right.value).toBe(1);
+    });
+
     it('解析 > 表达式', () => {
       const code = '2 > 1;';
       const parser = createParser(code);
