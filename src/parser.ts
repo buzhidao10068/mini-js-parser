@@ -3,6 +3,7 @@ import type {
   Expression,
   FunctionDeclaration,
   Identifier,
+  LiteralExpression,
   ParameterDeclaration,
   ReturnStatement,
   SourceFile,
@@ -185,7 +186,7 @@ export function createParser(text: string) {
       throw new Error('return 语句只能在函数体中使用');
     }
     const pos = scanner.getTokenPos();
-    nextToken(); // return
+    nextToken();
     let expression: Expression | undefined;
     if (curToken() !== SyntaxKind.SemicolonToken) {
       expression = parseExpression();
@@ -214,17 +215,54 @@ export function createParser(text: string) {
   }
 
   function parseExpression(): Expression {
+    return parsePrimaryExpression();
+  }
+
+  function parsePrimaryExpression(): Expression {
     const pos = scanner.getTokenPos();
-    const text = scanner.getTokenValue();
-    nextToken();
-    // 暂时用 StringLiteral 表示
-    return {
-      kind: SyntaxKind.StringLiteral,
-      pos,
-      end: scanner.getTokenPos(),
-      text,
-      _expressionBrand: null,
-    } as Expression;
+    if (curToken() === SyntaxKind.NumericLiteral) {
+      const val = parseFloat(scanner.getTokenValue());
+      const text = scanner.getTokenText();
+      nextToken();
+      return {
+        kind: SyntaxKind.NumericLiteral,
+        pos,
+        end: scanner.getTokenPos(),
+        value: val,
+        text,
+        _expressionBrand: null,
+      } as LiteralExpression;
+    } else if (
+      curToken() === SyntaxKind.TrueKeyword ||
+      curToken() === SyntaxKind.FalseKeyword
+    ) {
+      const kind = curToken();
+      const text = kind === SyntaxKind.TrueKeyword ? 'true' : 'false';
+      nextToken();
+      return {
+        kind,
+        pos,
+        end: scanner.getTokenPos(),
+        value: kind === SyntaxKind.TrueKeyword,
+        text,
+        _expressionBrand: null,
+      } as LiteralExpression;
+    } else if (curToken() === SyntaxKind.StringLiteral) {
+      const text = scanner.getTokenValue(); // scanner stripped quotes
+      nextToken();
+      return {
+        kind: SyntaxKind.StringLiteral,
+        pos,
+        end: scanner.getTokenPos(),
+        value: text,
+        text,
+        _expressionBrand: null,
+      } as LiteralExpression;
+    }
+
+    throw new Error(
+      `Unexpected token: ${SyntaxKind[curToken()]} at position ${pos}`,
+    );
   }
 
   function parseSemicolon() {

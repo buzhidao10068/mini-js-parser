@@ -132,3 +132,13 @@ export interface ReturnStatement extends Statement {
   kind: SyntaxKind.ReturnStatement;
   expression?: Expression;
 }
+
+export interface LiteralExpression extends Expression {
+  kind:
+    | SyntaxKind.NumericLiteral
+    | SyntaxKind.StringLiteral
+    | SyntaxKind.TrueKeyword
+    | SyntaxKind.FalseKeyword;
+  value: number | string | boolean;
+  text: string;
+}
