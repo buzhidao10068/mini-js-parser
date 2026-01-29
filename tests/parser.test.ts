@@ -4,6 +4,7 @@ import {
   LiteralExpression,
   ReturnStatement,
   SyntaxKind,
+  WhileStatement,
   createParser,
 } from '../src';
 
@@ -72,9 +73,21 @@ describe('Parser', () => {
     const returnStmt = functionDecl.body.statements[0] as ReturnStatement;
     expect(returnStmt.kind).toBe(SyntaxKind.ReturnStatement);
     const returnExpr = returnStmt.expression! as LiteralExpression;
-    expect(returnExpr).toBeTruthy();
     expect(returnExpr.kind).toBe(SyntaxKind.NumericLiteral);
     expect(returnExpr.text).toBe('1');
     expect(returnExpr.value).toBe(1);
+  });
+
+  it('解析 while 语句', () => {
+    const code = 'while (true) {}';
+    const parser = createParser(code);
+    const sourceFile = parser.parseSourceFile();
+
+    expect(sourceFile.statements).toHaveLength(1);
+    const whileStmt = sourceFile.statements[0] as WhileStatement;
+    expect(whileStmt.kind).toBe(SyntaxKind.WhileStatement);
+    const expression = whileStmt.expression! as LiteralExpression;
+    expect(expression.kind).toBe(SyntaxKind.TrueKeyword);
+    expect(expression.text).toBe('true');
   });
 });

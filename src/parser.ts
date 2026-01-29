@@ -9,6 +9,7 @@ import type {
   SourceFile,
   Statement,
   VariableStatement,
+  WhileStatement,
 } from './ast';
 import { SyntaxKind } from './ast';
 import { createScanner } from './scanner';
@@ -64,6 +65,8 @@ export function createParser(text: string) {
         return parseFunctionDeclaration();
       case SyntaxKind.OpenBraceToken:
         return parseBlock();
+      case SyntaxKind.WhileKeyword:
+        return parseWhileStatement();
       case SyntaxKind.ReturnKeyword:
         return parseReturnStatement();
     }
@@ -177,6 +180,23 @@ export function createParser(text: string) {
       pos,
       end: scanner.getTokenPos(),
       statements,
+      _statementBrand: null,
+    };
+  }
+
+  function parseWhileStatement(): WhileStatement {
+    const pos = scanner.getTokenPos();
+    nextToken(); // while
+    expect(SyntaxKind.OpenParenToken);
+    const expression = parseExpression();
+    expect(SyntaxKind.CloseParenToken);
+    const statement = parseStatement();
+    return {
+      kind: SyntaxKind.WhileStatement,
+      pos,
+      end: statement.end,
+      expression,
+      statement,
       _statementBrand: null,
     };
   }

@@ -128,6 +128,12 @@ export interface Block extends Statement {
   statements: Statement[];
 }
 
+export interface WhileStatement extends Statement {
+  kind: SyntaxKind.WhileStatement;
+  expression: Expression;
+  statement: Statement;
+}
+
 export interface ReturnStatement extends Statement {
   kind: SyntaxKind.ReturnStatement;
   expression?: Expression;
