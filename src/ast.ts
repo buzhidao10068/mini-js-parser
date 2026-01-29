@@ -202,6 +202,12 @@ export interface ElementAccessExpression extends Expression {
   argumentExpression: Expression;
 }
 
+export interface CallExpression extends Expression {
+  kind: SyntaxKind.CallExpression;
+  expression: Expression;
+  arguments: Expression[];
+}
+
 export interface ExpressionStatement extends Statement {
   kind: SyntaxKind.ExpressionStatement;
   expression: Expression;

@@ -16,6 +16,7 @@ import type {
   ArrayLiteralExpression,
   ElementAccessExpression,
   AssignmentExpression,
+  CallExpression,
 } from '../src';
 import { SyntaxKind, createParser } from '../src';
 
@@ -499,13 +500,48 @@ describe('Parser', () => {
     });
   });
 
+  describe('函数调用', () => {
+    it('解析简单函数调用 foo()', () => {
+      const code = 'foo();';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as ExpressionStatement;
+      expect(statement.kind).toBe(SyntaxKind.ExpressionStatement);
+      const expression = statement.expression as CallExpression;
+      expect(expression.kind).toBe(SyntaxKind.CallExpression);
+      expect(expression.expression.kind).toBe(SyntaxKind.Identifier);
+      expect(expression.arguments).toHaveLength(0);
+    });
+
+    it('解析带参数函数调用 foo(1, 2, 3)', () => {
+      const code = 'foo(1, 2, 3);';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as ExpressionStatement;
+      expect(statement.kind).toBe(SyntaxKind.ExpressionStatement);
+      const expression = statement.expression as CallExpression;
+      expect(expression.kind).toBe(SyntaxKind.CallExpression);
+      expect(expression.expression.kind).toBe(SyntaxKind.Identifier);
+      expect(expression.arguments).toHaveLength(3);
+      expect(expression.arguments[0].kind).toBe(SyntaxKind.NumericLiteral);
+      expect(expression.arguments[1].kind).toBe(SyntaxKind.NumericLiteral);
+      expect(expression.arguments[2].kind).toBe(SyntaxKind.NumericLiteral);
+      expect((expression.arguments[0] as LiteralExpression).value).toBe(1);
+      expect((expression.arguments[1] as LiteralExpression).value).toBe(2);
+      expect((expression.arguments[2] as LiteralExpression).value).toBe(3);
+    });
+  });
+
   describe('解析数组', () => {
     it('解析空数组 []', () => {
       const code = '[];';
       const parser = createParser(code);
       const sourceFile = parser.parseSourceFile();
 
-      expect(sourceFile.statements).toHaveLength(1);
       const statement = sourceFile.statements[0] as ExpressionStatement;
       expect(statement.kind).toBe(SyntaxKind.ExpressionStatement);
       const expression = statement.expression as ArrayLiteralExpression;
@@ -561,7 +597,6 @@ describe('Parser', () => {
       const statement = sourceFile.statements[0] as VariableStatement;
       expect(statement.kind).toBe(SyntaxKind.VariableStatement);
       const declaration = statement.declaration as VariableDeclaration;
-      console.log(declaration);
       expect(declaration.kind).toBe(SyntaxKind.VariableDeclaration);
       expect(declaration.name.kind).toBe(SyntaxKind.Identifier);
       expect(declaration.name.text).toBe('a');

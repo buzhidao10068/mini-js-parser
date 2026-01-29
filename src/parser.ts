@@ -3,6 +3,7 @@ import type {
   AssignmentExpression,
   BinaryExpression,
   Block,
+  CallExpression,
   ElementAccessExpression,
   Expression,
   ExpressionStatement,
@@ -339,7 +340,7 @@ export function createParser(text: string) {
           left,
           right,
           _expressionBrand: null,
-        } as AssignmentExpression; // Cast to avoid circular type issues if any, though AssignmentExpression should be fine
+        } as AssignmentExpression;
       } else {
         left = {
           kind: SyntaxKind.BinaryExpression,
@@ -415,6 +416,27 @@ export function createParser(text: string) {
           argumentExpression,
           _expressionBrand: null,
         } as ElementAccessExpression;
+      } else if (curToken() === SyntaxKind.OpenParenToken) {
+        nextToken();
+        const args: Expression[] = [];
+        while (
+          (curToken() as SyntaxKind) !== SyntaxKind.CloseParenToken &&
+          (curToken() as SyntaxKind) !== SyntaxKind.EndOfFileToken
+        ) {
+          args.push(parseExpression());
+          if ((curToken() as SyntaxKind) === SyntaxKind.CommaToken) {
+            nextToken();
+          }
+        }
+        expect(SyntaxKind.CloseParenToken);
+        expression = {
+          kind: SyntaxKind.CallExpression,
+          pos: expression.pos,
+          end: scanner.getTokenPos(),
+          expression,
+          arguments: args,
+          _expressionBrand: null,
+        } as CallExpression;
       } else {
         break;
       }
@@ -466,6 +488,11 @@ export function createParser(text: string) {
       } as LiteralExpression;
     } else if (curToken() === SyntaxKind.OpenBracketToken) {
       return parseArrayLiteralExpression();
+    } else if (curToken() === SyntaxKind.OpenParenToken) {
+      nextToken();
+      const expr = parseExpression();
+      expect(SyntaxKind.CloseParenToken);
+      return expr;
     }
 
     throw new Error(
@@ -475,7 +502,7 @@ export function createParser(text: string) {
 
   function parseArrayLiteralExpression(): ArrayLiteralExpression {
     const pos = scanner.getTokenPos();
-    nextToken(); // [
+    nextToken();
     const elements: Expression[] = [];
     while (
       curToken() !== SyntaxKind.CloseBracketToken &&
