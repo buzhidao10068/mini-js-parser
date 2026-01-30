@@ -196,10 +196,32 @@ export interface ArrayLiteralExpression extends Expression {
   elements: Expression[];
 }
 
+export interface ObjectLiteralExpression extends Expression {
+  kind: SyntaxKind.ObjectLiteralExpression;
+  properties: PropertyAssignment[];
+}
+
+export interface PropertyAssignment extends Node {
+  kind: SyntaxKind.PropertyAssignment;
+  name: Identifier | LiteralExpression;
+  initializer: Expression;
+}
+
+export interface PropertyAccessExpression extends Expression {
+  kind: SyntaxKind.PropertyAccessExpression;
+  expression: Expression;
+  name: Identifier;
+}
+
 export interface ElementAccessExpression extends Expression {
   kind: SyntaxKind.ElementAccessExpression;
   expression: Expression;
   argumentExpression: Expression;
+}
+
+export interface DeleteExpression extends Expression {
+  kind: SyntaxKind.DeleteExpression;
+  expression: Expression;
 }
 
 export interface CallExpression extends Expression {

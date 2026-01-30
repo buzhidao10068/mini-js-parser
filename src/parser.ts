@@ -4,6 +4,7 @@ import type {
   BinaryExpression,
   Block,
   CallExpression,
+  DeleteExpression,
   ElementAccessExpression,
   Expression,
   ExpressionStatement,
@@ -12,9 +13,12 @@ import type {
   Identifier,
   IfStatement,
   LiteralExpression,
+  ObjectLiteralExpression,
   ParameterDeclaration,
   PostfixUnaryExpression,
   PrefixUnaryExpression,
+  PropertyAccessExpression,
+  PropertyAssignment,
   ReturnStatement,
   SourceFile,
   Statement,
@@ -378,6 +382,19 @@ export function createParser(text: string) {
       } as PrefixUnaryExpression;
     }
 
+    if (curToken() === SyntaxKind.DeleteKeyword) {
+      const pos = scanner.getTokenPos();
+      nextToken();
+      const expression = parseUnaryExpression();
+      return {
+        kind: SyntaxKind.DeleteExpression,
+        pos,
+        end: expression.end,
+        expression,
+        _expressionBrand: null,
+      } as DeleteExpression;
+    }
+
     let expression = parseMemberExpression();
 
     if (
@@ -404,7 +421,18 @@ export function createParser(text: string) {
   function parseMemberExpression(): Expression {
     let expression = parsePrimaryExpression();
     while (true) {
-      if (curToken() === SyntaxKind.OpenBracketToken) {
+      if (curToken() === SyntaxKind.DotToken) {
+        nextToken(); // .
+        const name = parseIdentifier();
+        expression = {
+          kind: SyntaxKind.PropertyAccessExpression,
+          pos: expression.pos,
+          end: name.end,
+          expression,
+          name,
+          _expressionBrand: null,
+        } as PropertyAccessExpression;
+      } else if (curToken() === SyntaxKind.OpenBracketToken) {
         nextToken();
         const argumentExpression = parseExpression();
         expect(SyntaxKind.CloseBracketToken);
@@ -488,6 +516,8 @@ export function createParser(text: string) {
       } as LiteralExpression;
     } else if (curToken() === SyntaxKind.OpenBracketToken) {
       return parseArrayLiteralExpression();
+    } else if (curToken() === SyntaxKind.OpenBraceToken) {
+      return parseObjectLiteralExpression();
     } else if (curToken() === SyntaxKind.OpenParenToken) {
       nextToken();
       const expr = parseExpression();
@@ -520,6 +550,63 @@ export function createParser(text: string) {
       end: scanner.getTokenPos(),
       elements,
       _expressionBrand: null,
+    };
+  }
+
+  function parseObjectLiteralExpression(): ObjectLiteralExpression {
+    const pos = scanner.getTokenPos();
+    nextToken(); // {
+    const properties: PropertyAssignment[] = [];
+    while (
+      curToken() !== SyntaxKind.CloseBraceToken &&
+      curToken() !== SyntaxKind.EndOfFileToken
+    ) {
+      properties.push(parsePropertyAssignment());
+      if (curToken() === SyntaxKind.CommaToken) {
+        nextToken();
+      }
+    }
+    expect(SyntaxKind.CloseBraceToken);
+    return {
+      kind: SyntaxKind.ObjectLiteralExpression,
+      pos,
+      end: scanner.getTokenPos(),
+      properties,
+      _expressionBrand: null,
+    } as ObjectLiteralExpression;
+  }
+
+  function parsePropertyAssignment(): PropertyAssignment {
+    const pos = scanner.getTokenPos();
+    let name: Identifier | LiteralExpression;
+    if (curToken() === SyntaxKind.Identifier) {
+      name = parseIdentifier();
+    } else if (curToken() === SyntaxKind.StringLiteral) {
+      const text = scanner.getTokenValue();
+      nextToken();
+      name = {
+        kind: SyntaxKind.StringLiteral,
+        pos,
+        end: scanner.getTokenPos(),
+        value: text,
+        text,
+        _expressionBrand: null,
+      } as LiteralExpression;
+    } else {
+      throw new Error(
+        'Expected identifier or string literal for property name',
+      );
+    }
+
+    expect(SyntaxKind.ColonToken);
+    const initializer = parseExpression();
+
+    return {
+      kind: SyntaxKind.PropertyAssignment,
+      pos,
+      end: initializer.end,
+      name,
+      initializer,
     };
   }
 

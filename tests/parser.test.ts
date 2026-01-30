@@ -17,6 +17,8 @@ import type {
   ElementAccessExpression,
   AssignmentExpression,
   CallExpression,
+  ObjectLiteralExpression,
+  PropertyAccessExpression,
 } from '../src';
 import { SyntaxKind, createParser } from '../src';
 
@@ -549,7 +551,7 @@ describe('Parser', () => {
       expect(expression.elements).toHaveLength(0);
     });
 
-    it('解析 a[0]', () => {
+    it('解析数组元素访问', () => {
       const code = 'a[0];';
       const parser = createParser(code);
       const sourceFile = parser.parseSourceFile();
@@ -565,7 +567,7 @@ describe('Parser', () => {
       );
     });
 
-    it('解析 a[0] = 1', () => {
+    it('解析数组元素赋值', () => {
       const code = 'a[0] = 1;';
       const parser = createParser(code);
       const sourceFile = parser.parseSourceFile();
@@ -588,7 +590,7 @@ describe('Parser', () => {
       expect(right.value).toBe(1);
     });
 
-    it('解析 let a = [1, 2, 3];', () => {
+    it('解析数组元素初始化', () => {
       let code = 'let a = [1, 2, 3];';
       const parser = createParser(code);
       const sourceFile = parser.parseSourceFile();
@@ -615,6 +617,127 @@ describe('Parser', () => {
       expect(element2.kind).toBe(SyntaxKind.NumericLiteral);
       expect(element2.text).toBe('3');
       expect(element2.value).toBe(3);
+    });
+  });
+
+  describe('解析对象', () => {
+    it('解析创建空对象', () => {
+      const code = 'let a = {};';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as VariableStatement;
+      expect(statement.kind).toBe(SyntaxKind.VariableStatement);
+      const declaration = statement.declaration as VariableDeclaration;
+      expect(declaration.kind).toBe(SyntaxKind.VariableDeclaration);
+      expect(declaration.name.kind).toBe(SyntaxKind.Identifier);
+      expect(declaration.name.text).toBe('a');
+      const initializer = declaration.initializer as ObjectLiteralExpression;
+      expect(initializer.kind).toBe(SyntaxKind.ObjectLiteralExpression);
+      expect(initializer.properties).toHaveLength(0);
+    });
+
+    it('解析对象属性初始化', () => {
+      const code = 'let a = { x: 1, y: 2 };';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as VariableStatement;
+      expect(statement.kind).toBe(SyntaxKind.VariableStatement);
+      const declaration = statement.declaration as VariableDeclaration;
+      expect(declaration.kind).toBe(SyntaxKind.VariableDeclaration);
+      expect(declaration.name.kind).toBe(SyntaxKind.Identifier);
+      expect(declaration.name.text).toBe('a');
+      const initializer = declaration.initializer as ObjectLiteralExpression;
+      expect(initializer.kind).toBe(SyntaxKind.ObjectLiteralExpression);
+      expect(initializer.properties).toHaveLength(2);
+    });
+
+    it('解析对象属性访问', () => {
+      const code = 'let a = { x: 1, y: 2 }; a.x;';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(2);
+      const statement = sourceFile.statements[0] as VariableStatement;
+      expect(statement.kind).toBe(SyntaxKind.VariableStatement);
+      const declaration = statement.declaration as VariableDeclaration;
+      expect(declaration.kind).toBe(SyntaxKind.VariableDeclaration);
+      expect(declaration.name.kind).toBe(SyntaxKind.Identifier);
+      expect(declaration.name.text).toBe('a');
+      const initializer = declaration.initializer as ObjectLiteralExpression;
+      expect(initializer.kind).toBe(SyntaxKind.ObjectLiteralExpression);
+      expect(initializer.properties).toHaveLength(2);
+      const properties0 = initializer.properties[0];
+      const properties1 = initializer.properties[1];
+      expect(properties0.kind).toBe(SyntaxKind.PropertyAssignment);
+      expect(properties0.name.kind).toBe(SyntaxKind.Identifier);
+      expect(properties0.name.text).toBe('x');
+      expect(properties0.initializer.kind).toBe(SyntaxKind.NumericLiteral);
+      expect((properties0.initializer as LiteralExpression).text).toBe('1');
+      expect((properties0.initializer as LiteralExpression).value).toBe(1);
+      expect(properties1.kind).toBe(SyntaxKind.PropertyAssignment);
+      expect(properties1.name.kind).toBe(SyntaxKind.Identifier);
+      expect(properties1.name.text).toBe('y');
+      expect(properties1.initializer.kind).toBe(SyntaxKind.NumericLiteral);
+      expect((properties1.initializer as LiteralExpression).text).toBe('2');
+      expect((properties1.initializer as LiteralExpression).value).toBe(2);
+    });
+
+    it('解析对象属性赋值', () => {
+      const code = 'a.x = 2;';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as ExpressionStatement;
+      expect(statement.kind).toBe(SyntaxKind.ExpressionStatement);
+      const expression = statement.expression as AssignmentExpression;
+      expect(expression.kind).toBe(SyntaxKind.AssignmentExpression);
+      const left = expression.left as PropertyAccessExpression;
+      expect(left.kind).toBe(SyntaxKind.PropertyAccessExpression);
+      const leftExpression = statement.expression as AssignmentExpression;
+      expect(leftExpression.kind).toBe(SyntaxKind.AssignmentExpression);
+      expect(leftExpression.left.kind).toBe(
+        SyntaxKind.PropertyAccessExpression,
+      );
+      const assignmentExpression =
+        leftExpression.left as PropertyAccessExpression;
+      expect(assignmentExpression.kind).toBe(
+        SyntaxKind.PropertyAccessExpression,
+      );
+      expect(assignmentExpression.expression.kind).toBe(SyntaxKind.Identifier);
+      expect((assignmentExpression.expression as LiteralExpression).text).toBe(
+        'a',
+      );
+      expect(assignmentExpression.name.kind).toBe(SyntaxKind.Identifier);
+      expect(assignmentExpression.name.text).toBe('x');
+      const right = expression.right as LiteralExpression;
+      expect(right.kind).toBe(SyntaxKind.NumericLiteral);
+      expect(right.text).toBe('2');
+      expect(right.value).toBe(2);
+    });
+
+    it('解析对象属性访问链', () => {
+      const code = 'a.b[c].d;';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+      expect(sourceFile.statements).toHaveLength(1);
+      const statement = sourceFile.statements[0] as ExpressionStatement;
+      expect(statement.expression.kind).toBe(
+        SyntaxKind.PropertyAccessExpression,
+      );
+      expect(
+        (statement.expression as PropertyAccessExpression).expression.kind,
+      ).toBe(SyntaxKind.ElementAccessExpression);
+      expect(
+        (
+          (statement.expression as PropertyAccessExpression)
+            .expression as ElementAccessExpression
+        ).expression.kind,
+      ).toBe(SyntaxKind.PropertyAccessExpression);
     });
   });
 });
