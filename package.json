@@ -10,9 +10,11 @@
     "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
     "test": "vitest",
+    "test:run": "vitest --run",
     "build": "rolldown -c rolldown.config.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "lint:github": "oxlint --format=github",
     "fmt": "oxfmt --write",
     "fmt:check": "oxfmt --check",
     "lint:fmt": "pnpm run lint:fix && pnpm run fmt"
