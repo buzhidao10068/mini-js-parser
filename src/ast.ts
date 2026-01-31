@@ -138,9 +138,16 @@ export interface WhileStatement extends Statement {
 
 export interface ForStatement extends Statement {
   kind: SyntaxKind.ForStatement;
-  initializer?: VariableStatement | Expression; // Simplified: usually ForInitializer
+  initializer?: VariableStatement | Expression;
   condition?: Expression;
   incrementor?: Expression;
+  statement: Statement;
+}
+
+export interface ForInStatement extends Statement {
+  kind: SyntaxKind.ForInStatement;
+  initializer: VariableDeclaration;
+  expression: Expression;
   statement: Statement;
 }
 
