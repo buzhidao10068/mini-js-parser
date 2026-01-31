@@ -8,6 +8,7 @@ import type {
   ElementAccessExpression,
   Expression,
   ExpressionStatement,
+  ForInStatement,
   ForStatement,
   FunctionDeclaration,
   Identifier,
@@ -209,43 +210,71 @@ export function createParser(text: string) {
     };
   }
 
-  function parseForStatement(): ForStatement {
+  function parseForStatement(): ForStatement | ForInStatement {
     const pos = scanner.getTokenPos();
     nextToken();
     expect(SyntaxKind.OpenParenToken);
 
-    let initializer: VariableStatement | Expression | undefined;
-
-    if (curToken() === SyntaxKind.LetKeyword) {
-      initializer = parseVariableStatement();
-    } else if (curToken() !== SyntaxKind.SemicolonToken) {
-      initializer = parseExpression();
-      expect(SyntaxKind.SemicolonToken);
+    if (lookAhead(nextTokenIsInKeyword)) {
+      return parseForInStatement(pos);
     } else {
+      let initializer: VariableStatement | Expression | undefined;
+
+      if (curToken() === SyntaxKind.LetKeyword) {
+        initializer = parseVariableStatement();
+      } else if (curToken() !== SyntaxKind.SemicolonToken) {
+        initializer = parseExpression();
+        expect(SyntaxKind.SemicolonToken);
+      } else {
+        expect(SyntaxKind.SemicolonToken);
+      }
+
+      let condition: Expression | undefined;
+      if (curToken() !== SyntaxKind.SemicolonToken) {
+        condition = parseExpression();
+      }
       expect(SyntaxKind.SemicolonToken);
-    }
 
-    let condition: Expression | undefined;
-    if (curToken() !== SyntaxKind.SemicolonToken) {
-      condition = parseExpression();
-    }
-    expect(SyntaxKind.SemicolonToken);
+      let incrementor: Expression | undefined;
+      if (curToken() !== SyntaxKind.CloseParenToken) {
+        incrementor = parseExpression();
+      }
+      expect(SyntaxKind.CloseParenToken);
 
-    let incrementor: Expression | undefined;
-    if (curToken() !== SyntaxKind.CloseParenToken) {
-      incrementor = parseExpression();
+      const statement = parseStatement();
+
+      return {
+        kind: SyntaxKind.ForStatement,
+        pos,
+        end: statement.end,
+        initializer,
+        condition,
+        incrementor,
+        statement,
+        _statementBrand: null,
+      };
     }
+  }
+
+  function parseForInStatement(pos: number): ForInStatement {
+    nextToken();
+    const name = parseIdentifier();
+    expect(SyntaxKind.InKeyword);
+    const expression = parseExpression();
     expect(SyntaxKind.CloseParenToken);
-
     const statement = parseStatement();
 
     return {
-      kind: SyntaxKind.ForStatement,
+      kind: SyntaxKind.ForInStatement,
       pos,
       end: statement.end,
-      initializer,
-      condition,
-      incrementor,
+      initializer: {
+        kind: SyntaxKind.VariableDeclaration,
+        pos: name.pos,
+        end: name.end,
+        name,
+      },
+      expression,
       statement,
       _statementBrand: null,
     };
@@ -629,6 +658,18 @@ export function createParser(text: string) {
   function nextTokenIsBindingIdentifier(): boolean {
     nextToken();
     return isBindingIdentifier();
+  }
+
+  function nextTokenIsInKeyword(): boolean {
+    if (curToken() !== SyntaxKind.LetKeyword) {
+      return false;
+    }
+    let token = scanner.scan();
+    if (token !== SyntaxKind.Identifier) {
+      return false;
+    }
+    token = scanner.scan();
+    return token === SyntaxKind.InKeyword;
   }
 
   function expect(kind: SyntaxKind) {

@@ -21,6 +21,7 @@ import type {
   PropertyAccessExpression,
   IfStatement,
   Block,
+  ForInStatement,
 } from '../src';
 import { SyntaxKind, createParser } from '../src';
 
@@ -153,6 +154,23 @@ describe('Parser', () => {
       expect(initializerExpr.kind).toBe(SyntaxKind.NumericLiteral);
       expect(initializerExpr.text).toBe('0');
       expect(initializerExpr.value).toBe(0);
+    });
+
+    it('解析 for in 语句', () => {
+      const code = 'for (let i in a) {}';
+      const parser = createParser(code);
+      const sourceFile = parser.parseSourceFile();
+
+      expect(sourceFile.statements).toHaveLength(1);
+      const forInStmt = sourceFile.statements[0] as ForInStatement;
+      expect(forInStmt.kind).toBe(SyntaxKind.ForInStatement);
+      const initializer = forInStmt.initializer! as VariableDeclaration;
+      expect(initializer.kind).toBe(SyntaxKind.VariableDeclaration);
+      expect(initializer.name.kind).toBe(SyntaxKind.Identifier);
+      expect(initializer.name.text).toBe('i');
+      const forInExpr = forInStmt.expression! as LiteralExpression;
+      expect(forInExpr.kind).toBe(SyntaxKind.Identifier);
+      expect(forInExpr.text).toBe('a');
     });
 
     it('解析 if else 语句', () => {
