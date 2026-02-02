@@ -19,6 +19,7 @@ export const textToKeywordObj = {
   while: SyntaxKind.WhileKeyword,
   for: SyntaxKind.ForKeyword,
   in: SyntaxKind.InKeyword,
+  do: SyntaxKind.DoKeyword,
   return: SyntaxKind.ReturnKeyword,
   true: SyntaxKind.TrueKeyword,
   false: SyntaxKind.FalseKeyword,

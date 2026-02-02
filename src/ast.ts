@@ -10,6 +10,7 @@ export enum SyntaxKind {
   WhileKeyword, // while
   ForKeyword, // for
   InKeyword, // in
+  DoKeyword, // do
   ReturnKeyword, // return
   TrueKeyword, // true
   FalseKeyword, // false
@@ -135,6 +136,13 @@ export interface WhileStatement extends Statement {
   expression: Expression;
   statement: Statement;
 }
+
+export interface DoStatement extends Statement {
+  kind: SyntaxKind.DoStatement;
+  statement: Statement;
+  expression: Expression;
+}
+
 
 export interface ForStatement extends Statement {
   kind: SyntaxKind.ForStatement;

@@ -83,6 +83,8 @@ export function createParser(text: string) {
         return parseBlock();
       case SyntaxKind.WhileKeyword:
         return parseWhileStatement();
+      case SyntaxKind.DoKeyword:
+        return parseDoStatement();
       case SyntaxKind.ForKeyword:
         return parseForStatement();
       case SyntaxKind.IfKeyword:
@@ -254,6 +256,28 @@ export function createParser(text: string) {
         _statementBrand: null,
       };
     }
+  }
+
+  function parseDoStatement(): DoStatement {
+    const pos = scanner.getTokenPos();
+    nextToken(); // eat 'do'
+
+    const statement = parseStatement();
+
+    expect(SyntaxKind.WhileKeyword);
+    expect(SyntaxKind.OpenParenToken);
+    const expression = parseExpression();
+    expect(SyntaxKind.CloseParenToken);
+    parseSemicolon();
+
+    return {
+      kind: SyntaxKind.DoStatement,
+      pos,
+      end: scanner.getTokenPos(),
+      statement,
+      expression,
+      _statementBrand: null,
+    };
   }
 
   function parseForInStatement(pos: number): ForInStatement {
