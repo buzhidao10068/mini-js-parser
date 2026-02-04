@@ -86,7 +86,7 @@ export interface SourceFile extends Node {
   kind: SyntaxKind.SourceFile;
   statements: Statement[];
   text: string;
-  locals?: Map<string, symbol>;
+  locals?: Map<string, Symbol>;
 }
 
 export interface Statement extends Node {
@@ -118,6 +118,7 @@ export interface FunctionDeclaration extends Statement {
   name: Identifier;
   parameters: ParameterDeclaration[];
   body: Block;
+  locals?: Map<string, Symbol>;
 }
 
 export interface ParameterDeclaration extends Node {
@@ -128,6 +129,7 @@ export interface ParameterDeclaration extends Node {
 export interface Block extends Statement {
   kind: SyntaxKind.Block;
   statements: Statement[];
+  locals?: Map<string, Symbol>;
 }
 
 export interface WhileStatement extends Statement {
@@ -142,6 +144,7 @@ export interface ForStatement extends Statement {
   condition?: Expression;
   incrementor?: Expression;
   statement: Statement;
+  locals?: Map<string, Symbol>;
 }
 
 export interface ForInStatement extends Statement {
@@ -149,6 +152,7 @@ export interface ForInStatement extends Statement {
   initializer: VariableDeclaration;
   expression: Expression;
   statement: Statement;
+  locals?: Map<string, Symbol>;
 }
 
 export interface IfStatement extends Statement {
@@ -240,4 +244,9 @@ export interface CallExpression extends Expression {
 export interface ExpressionStatement extends Statement {
   kind: SyntaxKind.ExpressionStatement;
   expression: Expression;
+}
+
+export interface Symbol {
+  name: string;
+  declarations: Node[];
 }
