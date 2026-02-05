@@ -27,37 +27,6 @@ export const textToKeywordObj = {
 
 const textToKeyword = new Map(Object.entries(textToKeywordObj));
 
-// eslint-disable-next-line
-const textToToken = new Map(
-  Object.entries({
-    ...textToKeywordObj,
-    '{': SyntaxKind.OpenBraceToken,
-    '}': SyntaxKind.CloseBraceToken,
-    '(': SyntaxKind.OpenParenToken,
-    ')': SyntaxKind.CloseParenToken,
-    '[': SyntaxKind.OpenBracketToken,
-    ']': SyntaxKind.CloseBracketToken,
-    ';': SyntaxKind.SemicolonToken,
-    ',': SyntaxKind.CommaToken,
-    '.': SyntaxKind.DotToken,
-    ':': SyntaxKind.ColonToken,
-    '?': SyntaxKind.QuestionToken,
-    '=': SyntaxKind.EqualsToken,
-    '+': SyntaxKind.PlusToken,
-    '-': SyntaxKind.MinusToken,
-    '*': SyntaxKind.AsteriskToken,
-    '/': SyntaxKind.SlashToken,
-    '!=': SyntaxKind.ExclamationEqualsToken,
-    '++': SyntaxKind.PlusPlusToken,
-    '--': SyntaxKind.MinusMinusToken,
-    '==': SyntaxKind.EqualsEqualsToken,
-    '<': SyntaxKind.LessThanToken,
-    '<=': SyntaxKind.LessThanEqualsToken,
-    '>': SyntaxKind.GreaterThanToken,
-    '>=': SyntaxKind.GreaterThanEqualsToken,
-  }),
-);
-
 export function createScanner(text: string): Scanner {
   let pos = 0;
   let end = text.length;

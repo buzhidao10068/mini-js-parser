@@ -12,7 +12,7 @@ import {
 } from '../src/diagnostics';
 import { createParser, ErrorWithCause, report } from '../src';
 
-describe('report', () => {
+describe('Report', () => {
   it('报告生成', () => {
     const code = `
 function add(x: number, y: number): number {
