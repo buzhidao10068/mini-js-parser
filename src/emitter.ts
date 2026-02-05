@@ -22,21 +22,38 @@ import type {
   ElementAccessExpression,
   AssignmentExpression,
   LiteralExpression,
-  PostfixUnaryExpression, // Added
+  PostfixUnaryExpression,
+  Node,
 } from './ast';
 import { SyntaxKind } from './ast';
+import { sourceMapGenerator } from './sourcemap';
 
-export interface Printer {
-  printFile(sourceFile: SourceFile): string;
+export interface PrinterOptions {
+  sourceMap?: boolean;
+  fileName?: string;
 }
 
-export function createPrinter(): Printer {
+export function createPrinter(options: PrinterOptions = {}) {
   let output = '';
   let indentLevel = 0;
+  let line = 1;
+  let column = 0;
+  let smg: ReturnType<typeof sourceMapGenerator> | undefined;
+
+  if (options.sourceMap && options.fileName) {
+    smg = sourceMapGenerator(options.fileName);
+  }
+
+  return {
+    printFile,
+    getSourceMap,
+  };
 
   function printFile(sourceFile: SourceFile): string {
     output = '';
     indentLevel = 0;
+    line = 1;
+    column = 0;
 
     for (const stmt of sourceFile.statements) {
       printStatement(stmt);
@@ -45,8 +62,24 @@ export function createPrinter(): Printer {
     return output;
   }
 
-  function write(text: string) {
+  function getSourceMap(): string | undefined {
+    return smg?.toString();
+  }
+
+  function write(text: string, node?: Node) {
+    if (node && smg && node.pos >= 0) {
+      smg.addMapping(line, column, 1, 0);
+    }
+
     output += text;
+    for (const char of text) {
+      if (char === '\n') {
+        line++;
+        column = 0;
+      } else {
+        column++;
+      }
+    }
   }
 
   function indent() {
@@ -114,7 +147,7 @@ export function createPrinter(): Printer {
   }
 
   function printVariableStatement(stmt: VariableStatement) {
-    write('let ');
+    write('let ', stmt);
     printVariableDeclaration(stmt.declaration);
   }
 
@@ -127,7 +160,7 @@ export function createPrinter(): Printer {
   }
 
   function printFunctionDeclaration(func: FunctionDeclaration) {
-    write('function ');
+    write('function ', func);
     printIdentifier(func.name);
     write('(');
     func.parameters.forEach((param, index) => {
@@ -140,7 +173,7 @@ export function createPrinter(): Printer {
   }
 
   function printIfStatement(stmt: IfStatement) {
-    write('if');
+    write('if', stmt);
     write(' ');
     write('(');
     printExpression(stmt.expression);
@@ -173,7 +206,7 @@ export function createPrinter(): Printer {
   }
 
   function printWhileStatement(stmt: WhileStatement) {
-    write('while');
+    write('while', stmt);
     write(' ');
     write('(');
     printExpression(stmt.expression);
@@ -187,7 +220,7 @@ export function createPrinter(): Printer {
   }
 
   function printForStatement(stmt: ForStatement) {
-    write('for');
+    write('for', stmt);
     write(' ');
     write('(');
     if (stmt.initializer) {
@@ -218,7 +251,7 @@ export function createPrinter(): Printer {
   }
 
   function printReturnStatement(stmt: ReturnStatement) {
-    write('return');
+    write('return', stmt);
     if (stmt.expression) {
       write(' ');
       printExpression(stmt.expression);
@@ -314,14 +347,14 @@ export function createPrinter(): Printer {
   }
 
   function printIdentifier(node: Identifier) {
-    write(node.text);
+    write(node.text, node);
   }
 
   function printLiteral(node: LiteralExpression) {
     if (node.kind === SyntaxKind.StringLiteral) {
-      write(`"${node.value}"`);
+      write(`"${node.value}"`, node);
     } else {
-      write(node.text || node.value.toString());
+      write(node.text || node.value.toString(), node);
     }
   }
 
@@ -387,8 +420,4 @@ export function createPrinter(): Printer {
     printExpression(expr.operand);
     write(getOperator(expr.operator));
   }
-
-  return {
-    printFile,
-  };
 }

@@ -6,6 +6,5 @@ export default defineConfig({
     format: 'esm',
     file: 'dist/index.esm.js',
     cleanDir: true,
-    minify: true,
   },
 });

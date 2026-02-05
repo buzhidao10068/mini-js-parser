@@ -136,4 +136,23 @@ describe('Emitter', () => {
       '{ let i = 0; while (i < 10) { { a; } i++; } }',
     );
   });
+
+  it('生成 SourceMap', () => {
+    const code = 'let a = 1;';
+    const sourceFile = createParser(code).parseSourceFile();
+    const printer = createPrinter({ sourceMap: true, fileName: 'test.js' });
+    printer.printFile(sourceFile);
+    const map = printer.getSourceMap();
+
+    expect(map).toBeDefined();
+    if (map) {
+      const parsedMap = JSON.parse(map);
+      console.log(map);
+      expect(parsedMap.version).toBe(3);
+      expect(parsedMap.file).toBe('test.js');
+      expect(parsedMap.sources).toEqual(['test.js']);
+      expect(parsedMap.mappings).toBeTypeOf('string');
+      expect(parsedMap.mappings.length).toBeGreaterThan(0);
+    }
+  });
 });
