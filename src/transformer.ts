@@ -210,6 +210,8 @@ function visitEachChild(node: Node, visitor: Visitor, _context: TransformationCo
       if (visited) {
         if (visited !== child) someChanged = true;
         newNodes.push(visited);
+      } else {
+        someChanged = true;
       }
     }
     return someChanged ? newNodes : nodes;

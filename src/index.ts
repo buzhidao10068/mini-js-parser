@@ -8,3 +8,4 @@ export * from './factory';
 export * from './emitter';
 
 export * from './diagnostics';
+export * from './transformers';

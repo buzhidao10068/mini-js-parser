@@ -275,4 +275,5 @@ export interface ExpressionStatement extends Statement {
 export interface Symbol {
   name: string;
   declarations: Node[];
+  isReferenced?: boolean;
 }

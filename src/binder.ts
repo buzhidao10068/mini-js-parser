@@ -1,32 +1,34 @@
-import {
-  SyntaxKind,
-  FlowFlags,
-  type FunctionDeclaration,
-  type Node,
-  type ParameterDeclaration,
-  type SourceFile,
-  type VariableDeclaration,
-  type Symbol,
-  type Block,
-  type VariableStatement,
-  type ExpressionStatement,
-  type IfStatement,
-  type WhileStatement,
-  type ForStatement,
-  type ForInStatement,
-  type ReturnStatement,
-  type BinaryExpression,
-  type PrefixUnaryExpression,
-  type CallExpression,
-  type ArrayLiteralExpression,
-  type ObjectLiteralExpression,
-  type PropertyAssignment,
-  type PropertyAccessExpression,
-  type ElementAccessExpression,
-  type DeleteExpression,
-  type FlowNode,
-  type LocalScope,
+import type {
+  FunctionDeclaration,
+  Node,
+  ParameterDeclaration,
+  SourceFile,
+  VariableDeclaration,
+  Symbol,
+  Block,
+  VariableStatement,
+  ExpressionStatement,
+  IfStatement,
+  WhileStatement,
+  ForStatement,
+  ForInStatement,
+  ReturnStatement,
+  BinaryExpression,
+  PrefixUnaryExpression,
+  CallExpression,
+  ArrayLiteralExpression,
+  ObjectLiteralExpression,
+  PropertyAssignment,
+  PropertyAccessExpression,
+  ElementAccessExpression,
+  DeleteExpression,
+  FlowNode,
+  LocalScope,
+  AssignmentExpression,
+  PostfixUnaryExpression,
+  Identifier,
 } from './ast';
+import { SyntaxKind, FlowFlags } from './ast';
 
 type CbNode<T> = (node: Node) => T | undefined;
 
@@ -101,6 +103,9 @@ export function bindSourceFile(file: SourceFile) {
       case SyntaxKind.ReturnStatement:
         bindReturnStatement(node as ReturnStatement);
         break;
+      case SyntaxKind.Identifier:
+        bindIdentifier(node as Identifier);
+        break;
       default:
         forEachChild(node, bind);
         break;
@@ -108,6 +113,21 @@ export function bindSourceFile(file: SourceFile) {
 
     currentScope = saveScope;
     parent = saveParent;
+  }
+
+  function isDeclarationName(id: Identifier): boolean {
+    const parent = id.parent;
+    if (!parent) return false;
+    if (parent.kind === SyntaxKind.VariableDeclaration) {
+      return (parent as VariableDeclaration).name === id;
+    }
+    if (parent.kind === SyntaxKind.FunctionDecl) {
+      return (parent as FunctionDeclaration).name === id;
+    }
+    if (parent.kind === SyntaxKind.ParameterDecl) {
+      return (parent as ParameterDeclaration).name === id;
+    }
+    return false;
   }
 
   function declareSymbol(name: string, declaration: Node) {
@@ -126,6 +146,24 @@ export function bindSourceFile(file: SourceFile) {
       scope.set(name, symbol);
     }
     symbol.declarations.push(declaration);
+  }
+
+  function resolveSymbol(id: Identifier) {
+    let current: Node | undefined = id;
+    while (current) {
+      if ((current as SourceFile).locals) {
+        const scope = (current as SourceFile).locals as Map<string, Symbol>;
+        if (scope.has(id.text)) {
+          const symbol = scope.get(id.text)!;
+          symbol.isReferenced = true;
+          return;
+        }
+      }
+      current = current.parent;
+    }
+    if (file.locals && file.locals.has(id.text)) {
+      file.locals.get(id.text)!.isReferenced = true;
+    }
   }
 
   function createFlowCondition(flags: FlowFlags, expression: Node): FlowNode {
@@ -230,11 +268,17 @@ export function bindSourceFile(file: SourceFile) {
   }
 
   function bindFunctionDeclaration(node: FunctionDeclaration) {
-    bind(node.name);
+    if (node.name) bind(node.name);
     if (node.parameters) {
       for (const param of node.parameters) bind(param);
     }
+
+    const saveFlow = currentFlow;
+    currentFlow = {
+      flags: FlowFlags.Start,
+    };
     if (node.body) bind(node.body);
+    currentFlow = saveFlow;
   }
 
   function bindReturnStatement(node: ReturnStatement) {
@@ -243,6 +287,12 @@ export function bindSourceFile(file: SourceFile) {
       flags: FlowFlags.Unreachable,
       antecedent: currentFlow,
     };
+  }
+
+  function bindIdentifier(node: Identifier) {
+    if (!isDeclarationName(node)) {
+      resolveSymbol(node);
+    }
   }
 }
 
@@ -274,8 +324,12 @@ export function forEachChild<T>(node: Node, cbNode: CbNode<T>): T | undefined {
       return bindReturnStatement(node as ReturnStatement, cbNode);
     case SyntaxKind.BinaryExpression:
       return bindBinaryExpression(node as BinaryExpression, cbNode);
+    case SyntaxKind.AssignmentExpression:
+      return bindAssignmentExpression(node as AssignmentExpression, cbNode);
     case SyntaxKind.PrefixUnaryExpression:
       return bindPrefixUnaryExpression(node as PrefixUnaryExpression, cbNode);
+    case SyntaxKind.PostfixUnaryExpression:
+      return bindPostfixUnaryExpression(node as PostfixUnaryExpression, cbNode);
     case SyntaxKind.CallExpression:
       return bindCallExpression(node as CallExpression, cbNode);
     case SyntaxKind.ArrayLiteralExpression:
@@ -306,6 +360,7 @@ function bindVariableStatement<T>(node: VariableStatement, cbNode: CbNode<T>) {
 }
 
 function bindVariableDeclaration<T>(node: VariableDeclaration, cbNode: CbNode<T>) {
+  if (node.name && cbNode(node.name)) return;
   return node.initializer && cbNode(node.initializer);
 }
 
@@ -346,7 +401,15 @@ function bindBinaryExpression<T>(node: BinaryExpression, cbNode: CbNode<T>) {
   return cbNode(node.left) || cbNode(node.right);
 }
 
+function bindAssignmentExpression<T>(node: AssignmentExpression, cbNode: CbNode<T>) {
+  return cbNode(node.left) || cbNode(node.right);
+}
+
 function bindPrefixUnaryExpression<T>(node: PrefixUnaryExpression, cbNode: CbNode<T>) {
+  return cbNode(node.operand);
+}
+
+function bindPostfixUnaryExpression<T>(node: PostfixUnaryExpression, cbNode: CbNode<T>) {
   return cbNode(node.operand);
 }
 
@@ -367,7 +430,8 @@ function bindPropertyAssignment<T>(node: PropertyAssignment, cbNode: CbNode<T>) 
 }
 
 function bindPropertyAccessExpression<T>(node: PropertyAccessExpression, cbNode: CbNode<T>) {
-  return cbNode(node.expression);
+  if (cbNode(node.expression)) return;
+  return cbNode(node.name);
 }
 
 function bindElementAccessExpression<T>(node: ElementAccessExpression, cbNode: CbNode<T>) {
