@@ -147,7 +147,6 @@ describe('Emitter', () => {
       expect(map).toBeDefined();
       if (map) {
         const parsedMap = JSON.parse(map);
-        console.log(map);
         expect(parsedMap.version).toBe(3);
         expect(parsedMap.file).toBe('test.js');
         expect(parsedMap.sources).toEqual(['test.js']);
@@ -158,7 +157,7 @@ describe('Emitter', () => {
   });
 
   describe('代码消除', () => {
-    it('应消除 return 之后的不可达代码', () => {
+    it('消除 return 之后的不可达代码', () => {
       const code = `
       function foo() {
         return 1;
@@ -175,7 +174,7 @@ describe('Emitter', () => {
       expect(output).toContain('return 1;');
     });
 
-    it('应消除 if 语句中不可达的分支（不可达代码）', () => {
+    it('消除 if 语句中不可达的分支（不可达代码）', () => {
       const code = `
       function bar(x) {
          if (x) {
@@ -193,7 +192,7 @@ describe('Emitter', () => {
       expect(output).not.toContain('let z = 3;');
     });
 
-    it('应结合常量折叠消除死代码', () => {
+    it('结合常量折叠消除死代码', () => {
       const code = `
       function test() {
         let constant = 100;
@@ -218,7 +217,7 @@ describe('Emitter', () => {
       expect(output).toContain('100');
     });
 
-    it('应消除未使用的局部函数和变量', () => {
+    it('消除未使用的局部函数和变量', () => {
       const code = `
       function main() {
         function unusedFunc() {
@@ -239,7 +238,30 @@ describe('Emitter', () => {
       expect(output).toContain('let usedVar = 2;');
     });
 
-    it('应消除顶层未使用的函数', () => {
+    it('消除未使用的变量（即便它引用了其他变量）', () => {
+      const code = `
+      function main() {
+        function unusedFunc() {
+          return 0;
+        }
+        let unusedVar = 1;
+        let unusedVar2 = unusedVar + 1;
+        let usedVar = 3;
+        return usedVar;
+      }
+      main();
+      `;
+
+      const output = transformCode(code, [deadCodeEliminationTransformer()]);
+
+      expect(output).not.toContain('function unusedFunc');
+      expect(output).not.toContain('let unusedVar');
+      expect(output).not.toContain('let unusedVar2');
+      expect(output).toContain('function main');
+      expect(output).toContain('let usedVar = 3;');
+    });
+
+    it('消除顶层未使用的函数', () => {
       const code = `
       function main() {
         return 3;
@@ -255,6 +277,35 @@ describe('Emitter', () => {
       const output = transformCode(code, [deadCodeEliminationTransformer()]);
 
       expect(output).not.toContain('function unusedFunc');
+      expect(output).toContain('function main');
+      expect(output).toContain('return 3;');
+    });
+
+    it('消除未使用的函数（即便它引用了其他函数）', () => {
+      const code = `
+      function usedFn1() {
+        return 3;
+      }
+
+      function usedFn2() {
+        return usedFn1;
+      }
+
+      function unusedFn() {
+        return 0;
+      }
+
+      function main() {
+        usedFn2();
+      }
+
+      main();
+    `;
+      const output = transformCode(code, [deadCodeEliminationTransformer()]);
+
+      expect(output).not.toContain('function unusedFn');
+      expect(output).toContain('function usedFn2');
+      expect(output).toContain('function usedFn1');
       expect(output).toContain('function main');
       expect(output).toContain('return 3;');
     });

@@ -115,21 +115,6 @@ export function bindSourceFile(file: SourceFile) {
     parent = saveParent;
   }
 
-  function isDeclarationName(id: Identifier): boolean {
-    const parent = id.parent;
-    if (!parent) return false;
-    if (parent.kind === SyntaxKind.VariableDeclaration) {
-      return (parent as VariableDeclaration).name === id;
-    }
-    if (parent.kind === SyntaxKind.FunctionDecl) {
-      return (parent as FunctionDeclaration).name === id;
-    }
-    if (parent.kind === SyntaxKind.ParameterDecl) {
-      return (parent as ParameterDeclaration).name === id;
-    }
-    return false;
-  }
-
   function declareSymbol(name: string, declaration: Node) {
     let symbol = currentScope.get(name);
     if (!symbol) {
@@ -156,6 +141,7 @@ export function bindSourceFile(file: SourceFile) {
         if (scope.has(id.text)) {
           const symbol = scope.get(id.text)!;
           symbol.isReferenced = true;
+          id.symbol = symbol;
           return;
         }
       }
@@ -163,6 +149,9 @@ export function bindSourceFile(file: SourceFile) {
     }
     if (file.locals && file.locals.has(id.text)) {
       file.locals.get(id.text)!.isReferenced = true;
+      const symbol = file.locals.get(id.text)!;
+      symbol.isReferenced = true;
+      id.symbol = symbol;
     }
   }
 
@@ -450,4 +439,19 @@ function visitNodes<T>(nodes: Node[], cbNode: CbNode<T>): T | undefined {
     }
   }
   return undefined;
+}
+
+export function isDeclarationName(id: Identifier): boolean {
+  const parent = id.parent;
+  if (!parent) return false;
+  if (parent.kind === SyntaxKind.VariableDeclaration) {
+    return (parent as VariableDeclaration).name === id;
+  }
+  if (parent.kind === SyntaxKind.FunctionDecl) {
+    return (parent as FunctionDeclaration).name === id;
+  }
+  if (parent.kind === SyntaxKind.ParameterDecl) {
+    return (parent as ParameterDeclaration).name === id;
+  }
+  return false;
 }

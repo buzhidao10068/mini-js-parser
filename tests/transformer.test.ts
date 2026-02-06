@@ -29,7 +29,7 @@ describe('Transformer', () => {
   }
 
   describe('代码转换', () => {
-    it('如果未进行更改，应返回相同的源文件', () => {
+    it('如果未进行更改，返回相同的源文件', () => {
       const code = 'let a = 1;';
       const sourceFile = createParser(code).parseSourceFile();
 
@@ -46,7 +46,7 @@ describe('Transformer', () => {
       expect(result).toBe(sourceFile);
     });
 
-    it('应转换标识符', () => {
+    it('转换标识符', () => {
       const code = 'let a = 1; function b(a) { return a; }';
 
       const renameTransformer: TransformerFactory = (context: TransformationContext) => {
@@ -74,7 +74,7 @@ describe('Transformer', () => {
       expect((returnStmt.expression as Identifier).text).toBe('renamed_a');
     });
 
-    it('应处理块转换', () => {
+    it('处理块转换', () => {
       const code = '{ let x = 1; }';
 
       const renameXTransformer: TransformerFactory = (context: TransformationContext) => {
@@ -243,7 +243,7 @@ describe('Transformer', () => {
   });
 
   describe('代码消除', () => {
-    it('应消除 return 之后的不可达代码', () => {
+    it('消除 return 之后的不可达代码', () => {
       const code = `
       function foo() {
         return 1;
@@ -259,7 +259,7 @@ describe('Transformer', () => {
       expect(func.body.statements[0].kind).toBe(SyntaxKind.ReturnStatement);
     });
 
-    it('应消除 if 语句中不可达的分支（不可达代码）', () => {
+    it('消除 if 语句中不可达的分支（不可达代码）', () => {
       const code = `
       function bar(x) {
          if (x) {
@@ -278,7 +278,7 @@ describe('Transformer', () => {
       expect(func.body.statements[0].kind).toBe(SyntaxKind.IfStatement);
     });
 
-    it('应结合常量折叠消除死代码', () => {
+    it('结合常量折叠消除死代码', () => {
       const code = `
       function test() {
         let constant = 100;
@@ -305,7 +305,7 @@ describe('Transformer', () => {
       expect(block.statements[0].kind).toBe(SyntaxKind.ReturnStatement);
     });
 
-    it('应消除未使用的局部函数和变量', () => {
+    it('消除未使用的局部函数和变量', () => {
       const code = `
       function main() {
         function unusedFunc() {
@@ -327,7 +327,34 @@ describe('Transformer', () => {
       expect(func.body.statements[1].kind).toBe(SyntaxKind.ReturnStatement);
     });
 
-    it('应消除顶层未使用的函数', () => {
+    it('消除未使用的变量（即便它引用了其他变量）', () => {
+      const code = `
+      function main() {
+        function unusedFunc() {
+          return 0;
+        }
+        let unusedVar1 = 1;
+        let unusedVar2 = unusedVar1 + 1;
+        let usedVar = 3;
+        return usedVar;
+      }
+      main();
+      `;
+
+      const result = transformCode(code, [deadCodeEliminationTransformer()]);
+      const func = result.statements[0] as FunctionDeclaration;
+
+      const stmts = func.body.statements;
+      const varNames = stmts
+        .filter((s) => s.kind === SyntaxKind.VariableStatement)
+        .map((s) => ((s as VariableStatement).declaration.name as Identifier).text);
+
+      expect(varNames).not.toContain('unusedVar1');
+      expect(varNames).not.toContain('unusedVar2');
+      expect(varNames).toContain('usedVar');
+    });
+
+    it('消除顶层未使用的函数', () => {
       const code = `
       function main() {
         return 3;

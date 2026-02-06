@@ -126,6 +126,7 @@ export interface Expression extends Node {
 export interface Identifier extends Expression {
   kind: SyntaxKind.Identifier;
   text: string;
+  symbol?: Symbol;
 }
 
 export interface VariableStatement extends Statement {
