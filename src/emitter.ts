@@ -29,7 +29,7 @@ import { SyntaxKind } from './ast';
 import { sourceMapGenerator } from './sourcemap';
 
 export interface PrinterOptions {
-  fileName?: string;
+  filename?: string;
   sourceMap?: boolean;
   minify?: boolean;
 }
@@ -41,8 +41,8 @@ export function createPrinter(options: PrinterOptions = {}) {
   let column = 0;
   let smg: ReturnType<typeof sourceMapGenerator> | undefined;
 
-  if (options.sourceMap && options.fileName) {
-    smg = sourceMapGenerator(options.fileName);
+  if (options.sourceMap && options.filename) {
+    smg = sourceMapGenerator(options.filename);
   }
 
   return {

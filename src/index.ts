@@ -9,3 +9,4 @@ export * from './emitter';
 export * from './minifier';
 export * from './diagnostics';
 export * from './transformers';
+export * from './compiler';
