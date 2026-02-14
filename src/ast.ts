@@ -76,18 +76,44 @@ export enum SyntaxKind {
   DeleteExpression,
 }
 
+export enum FlowFlags {
+  Unreachable = 1 << 0,
+  Start = 1 << 1,
+  BranchLabel = 1 << 2,
+  LoopLabel = 1 << 3,
+  Assignment = 1 << 4,
+  TrueCondition = 1 << 5,
+  FalseCondition = 1 << 6,
+  SwitchClause = 1 << 7,
+  ArrayMutation = 1 << 8,
+  Call = 1 << 9,
+  ReduceLabel = 1 << 10,
+  Referenced = 1 << 11,
+  Shared = 1 << 12,
+}
+
+export type LocalScope = Map<string, Symbol>;
+
+export interface FlowNode {
+  flags: FlowFlags;
+  antecedent?: FlowNode;
+  antecedents?: FlowNode[];
+  node?: Node;
+}
+
 export interface Node {
   kind: SyntaxKind;
   pos: number;
   end: number;
   parent?: Node;
+  flowNode?: FlowNode;
 }
 
 export interface SourceFile extends Node {
   kind: SyntaxKind.SourceFile;
   statements: Statement[];
   text: string;
-  locals?: Map<string, symbol>;
+  locals?: LocalScope;
 }
 
 export interface Statement extends Node {
@@ -101,6 +127,7 @@ export interface Expression extends Node {
 export interface Identifier extends Expression {
   kind: SyntaxKind.Identifier;
   text: string;
+  symbol?: Symbol;
 }
 
 export interface VariableStatement extends Statement {
@@ -119,6 +146,7 @@ export interface FunctionDeclaration extends Statement {
   name: Identifier;
   parameters: ParameterDeclaration[];
   body: Block;
+  locals?: Map<string, Symbol>;
 }
 
 export interface ParameterDeclaration extends Node {
@@ -129,6 +157,7 @@ export interface ParameterDeclaration extends Node {
 export interface Block extends Statement {
   kind: SyntaxKind.Block;
   statements: Statement[];
+  locals?: Map<string, Symbol>;
 }
 
 export interface WhileStatement extends Statement {
@@ -150,6 +179,7 @@ export interface ForStatement extends Statement {
   condition?: Expression;
   incrementor?: Expression;
   statement: Statement;
+  locals?: Map<string, Symbol>;
 }
 
 export interface ForInStatement extends Statement {
@@ -157,6 +187,7 @@ export interface ForInStatement extends Statement {
   initializer: VariableDeclaration;
   expression: Expression;
   statement: Statement;
+  locals?: Map<string, Symbol>;
 }
 
 export interface IfStatement extends Statement {
@@ -248,4 +279,10 @@ export interface CallExpression extends Expression {
 export interface ExpressionStatement extends Statement {
   kind: SyntaxKind.ExpressionStatement;
   expression: Expression;
+}
+
+export interface Symbol {
+  name: string;
+  declarations: Node[];
+  isReferenced?: boolean;
 }

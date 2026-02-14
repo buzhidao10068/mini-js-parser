@@ -28,6 +28,7 @@ import type {
 } from './ast';
 import { SyntaxKind } from './ast';
 import { createScanner } from './scanner';
+import { ErrorKind } from './types';
 import { getOperatorPrecedence, OperatorPrecedence } from './utilities';
 
 export enum ScopeFlags {
@@ -99,9 +100,6 @@ export function createParser(text: string) {
     const pos = scanner.getTokenPos();
     nextToken();
 
-    if (curToken() !== SyntaxKind.Identifier) {
-      throw new Error('let 语句必须绑定一个标识符');
-    }
     const identifier = parseIdentifier();
 
     let initializer: Expression | undefined;
@@ -132,7 +130,7 @@ export function createParser(text: string) {
     nextToken();
 
     if (curToken() !== SyntaxKind.Identifier) {
-      throw new Error('函数声明语句必须绑定一个标识符');
+      throw reportError('函数声明语句必须绑定一个标识符。', ErrorKind.InvalidFunctionIdentifier);
     }
     const name = parseIdentifier();
 
@@ -141,7 +139,7 @@ export function createParser(text: string) {
     const parameters: ParameterDeclaration[] = [];
     while (curToken() !== SyntaxKind.CloseParenToken && curToken() !== SyntaxKind.EndOfFileToken) {
       if (curToken() !== SyntaxKind.Identifier) {
-        throw new Error('函数参数必须绑定一个标识符');
+        throw reportError('函数参数必须绑定一个标识符。', ErrorKind.InvalidFunctionParameter);
       }
       const paramPos = scanner.getTokenPos();
       const paramName = parseIdentifier();
@@ -183,7 +181,7 @@ export function createParser(text: string) {
       statements.push(parseStatement());
     }
     if (curToken() !== SyntaxKind.CloseBraceToken) {
-      throw new Error("Expected '}'");
+      throw reportError("缺少右大括号 '}'。", ErrorKind.MissingSymbol);
     }
     nextToken();
     return {
@@ -329,7 +327,7 @@ export function createParser(text: string) {
 
   function parseReturnStatement(): ReturnStatement {
     if ((scopeFlags & ScopeFlags.InFunction) === 0) {
-      throw new Error('return 语句只能在函数体中使用');
+      throw reportError('return 语句只能在函数体中使用。', ErrorKind.ReturnOutsideFunction);
     }
     const pos = scanner.getTokenPos();
     nextToken();
@@ -463,7 +461,7 @@ export function createParser(text: string) {
     let expression = parsePrimaryExpression();
     while (true) {
       if (curToken() === SyntaxKind.DotToken) {
-        nextToken(); // .
+        nextToken();
         const name = parseIdentifier();
         expression = {
           kind: SyntaxKind.PropertyAccessExpression,
@@ -563,7 +561,11 @@ export function createParser(text: string) {
       return expr;
     }
 
-    throw new Error(`Unexpected token: ${SyntaxKind[curToken()]} at position ${pos}`);
+    if (curToken() === SyntaxKind.EqualsToken) {
+      throw reportError(`let 语句必须绑定一个标识符。`, ErrorKind.InvalidIdentifier);
+    }
+
+    throw reportError(`无效表达式。`, ErrorKind.InvalidExpression);
   }
 
   function parseArrayLiteralExpression(): ArrayLiteralExpression {
@@ -626,7 +628,10 @@ export function createParser(text: string) {
         _expressionBrand: null,
       } as LiteralExpression;
     } else {
-      throw new Error('Expected identifier or string literal for property name');
+      throw reportError(
+        '对象字面量属性名必须是标识符或字符串字面量。',
+        ErrorKind.InvalidObjectPropertyIdentifier,
+      );
     }
 
     expect(SyntaxKind.ColonToken);
@@ -660,9 +665,7 @@ export function createParser(text: string) {
 
   function parseSemicolon() {
     if (curToken() !== SyntaxKind.SemicolonToken) {
-      throw new Error(
-        `位置 ${scanner.getTokenPos()} 变量声明语句必须以分号结尾, 但得到 ${SyntaxKind[curToken()]}.`,
-      );
+      throw reportError(`缺少分号。`, ErrorKind.MissingSymbol);
     }
     nextToken();
   }
@@ -698,10 +701,32 @@ export function createParser(text: string) {
 
   function expect(kind: SyntaxKind) {
     if (curToken() !== kind) {
-      throw new Error(
-        `这里应该是 ${SyntaxKind[kind]} 但得到 ${SyntaxKind[curToken()]} 在 ${scanner.getTokenPos()}`,
+      throw reportError(
+        `位置 ${scanner.getTokenPos()} 这里应该是 ${SyntaxKind[kind]} 但得到 ${SyntaxKind[curToken()]}。`,
+        ErrorKind.NotExpectToken,
       );
     }
     nextToken();
+  }
+
+  function reportError(msg: string, kind: ErrorKind): Error {
+    const curTokenMsg = {
+      pos: scanner.getTokenPos(),
+      token: scanner.getToken(),
+      tokenText: scanner.getTokenText(),
+    };
+    nextToken();
+    const nextTokenMsg = {
+      pos: scanner.getTokenPos(),
+      token: scanner.getToken(),
+      tokenText: scanner.getTokenText(),
+    };
+    return new Error(msg, {
+      cause: {
+        kind,
+        curTokenMsg,
+        nextTokenMsg,
+      },
+    });
   }
 }
