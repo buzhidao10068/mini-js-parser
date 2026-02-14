@@ -591,7 +591,7 @@ export function createParser(text: string) {
 
   function parseObjectLiteralExpression(): ObjectLiteralExpression {
     const pos = scanner.getTokenPos();
-    nextToken(); // {
+    nextToken();
     const properties: PropertyAssignment[] = [];
     while (curToken() !== SyntaxKind.CloseBraceToken && curToken() !== SyntaxKind.EndOfFileToken) {
       properties.push(parsePropertyAssignment());
@@ -704,4 +704,29 @@ export function createParser(text: string) {
     }
     nextToken();
   }
+<<<<<<< Updated upstream
 }
+=======
+
+  function reportError(msg: string, kind: ErrorKind): Error {
+    const curTokenMsg = {
+      pos: scanner.getTokenPos(),
+      token: scanner.getToken(),
+      tokenText: scanner.getTokenText(),
+    };
+    nextToken();
+    const nextTokenMsg = {
+      pos: scanner.getTokenPos(),
+      token: scanner.getToken(),
+      tokenText: scanner.getTokenText(),
+    };
+    return new Error(msg, {
+      cause: {
+        kind,
+        curTokenMsg,
+        nextTokenMsg,
+      },
+    });
+  }
+}
+>>>>>>> Stashed changes

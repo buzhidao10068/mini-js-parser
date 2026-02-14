@@ -249,3 +249,11 @@ export interface ExpressionStatement extends Statement {
   kind: SyntaxKind.ExpressionStatement;
   expression: Expression;
 }
+<<<<<<< Updated upstream
+=======
+
+export interface Symbol {
+  name: string;
+  declarations: Node[];
+}
+>>>>>>> Stashed changes
