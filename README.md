@@ -1,36 +1,35 @@
 # Mini JS Parser
 
-一个使用 TypeScript 编写的简易 JavaScript 解析器（Parser）。它实现了从源码到抽象语法树（AST）的完整解析过程，包括词法分析（Scanner）和语法分析（Parser）。
+一个使用 TypeScript 编写的简易 JavaScript 编译器前端实现。它实现了从源码到代码生成的完整流程，包括词法分析、语法分析、语义绑定、AST 转换和代码生成。
 
 本项目旨在用于学习和理解编译器前端的基本原理，支持 JavaScript 的一个常用子集。
 
 ## 特性
 
-- **零依赖**：核心解析逻辑不依赖任何第三方库。
-- **手写解析器**：采用递归下降（Recursive Descent）算法手动实现。
-- **完整流程**：包含 Scanner（词法分析器）和 Parser（语法分析器）。
-- **类型安全**：完全使用 TypeScript 编写，提供完整的 AST 类型定义。
+- **零依赖**：核心逻辑不依赖任何第三方库。
+- **手写解析器**：采用递归下降算法手动实现 Scanner 和 Parser。
+- **完整编译管线**：包含 Scanner、Parser、Binder、Transformer 和 Emitter。
+- **高级功能**：支持 Source Map 生成、死代码消除和常量折叠。
+- **类型安全**：完全使用 TypeScript 编写。
 
-## 功能支持
+## 核心模块
 
-支持以下 JavaScript 语法特性的解析：
+### 1. 解析器 (Parser)
+将源代码解析为抽象语法树 (AST)。
+- 支持变量声明 (let)、函数声明
+- 支持控制流 (if, while, for, return)
+- 支持各类表达式和字面量
 
-- **变量声明**: `let`
-- **函数声明**: `function name(args) { ... }`
-- **控制流**:
-  - `if` / `else`
-  - `while`
-  - `for` (包括 `for...in`)
-  - `return`
-- **表达式**:
-  - 赋值 (`=`)
-  - 二元运算 (`+`, `-`, `*`, `/`, `&&`, `||`, `==`, `!=`, `<`, `>`)
-  - 一元运算 (`++`, `--`, `+`, `-`, `delete`)
-  - 函数调用
-  - 成员访问 (`.` 和 `[]`)
-  - 字面量 (数字, 字符串, 布尔值, 数组 `[]`, 对象 `{}`)
+### 2. 绑定器 (Binder)
+处理作用域和符号定义，建立 AST 节点与符号 (Symbol) 之间的联系，支持控制流分析 (Control Flow Analysis)。
 
-详细的语法定义请参考 [Grammar 文档](./docs/grammar.md)。
+### 3. 转换器 (Transformer)
+提供 AST 转换框架，内置以下转换插件：
+- **死代码消除 (Dead Code Elimination)**: 移除不可达代码和未使用的变量/函数。
+- **常量折叠 (Constant Folding)**: 编译期计算常量表达式。
+
+### 4. 代码生成器 (Emitter)
+将 AST 转换回 JavaScript 代码，并支持生成 Source Map。
 
 ## 安装与使用
 
@@ -43,22 +42,26 @@ pnpm install
 ### 使用示例
 
 ```typescript
-import { createParser } from './src';
+import { compile, deadCodeEliminationTransformer } from './src';
 
 const code = `
-function add(a, b) {
-  return a + b;
+function main() {
+  let x = 1 + 2;
+  return x;
+  let dead = 0; // 这行代码将被移除
 }
-let result = add(1, 2);
+main();
 `;
 
-// 创建解析器实例
-const parser = createParser(code);
+const result = compile(code, {
+  filename: 'example.js',
+  sourceMap: true,
+  minify: false, // 开启 minify 会自动包含死代码消除和常量折叠
+  plugins: [deadCodeEliminationTransformer()]
+});
 
-// 解析生成 AST
-const sourceFile = parser.parseSourceFile();
-
-console.log(JSON.stringify(sourceFile, null, 2));
+console.log('Generated Code:\n', result.code);
+console.log('Source Map:\n', result.map);
 ```
 
 ## 开发
@@ -77,15 +80,28 @@ pnpm build
 pnpm test
 ```
 
+### 代码检查与格式化
+
+```bash
+pnpm lint
+pnpm fmt
+```
+
 ## 项目结构
 
 - `src/`
-  - `scanner.ts`: 词法分析器，将源代码转换为 Token 流。
-  - `parser.ts`: 语法分析器，将 Token 流转换为 AST。
-  - `ast.ts`: 定义 AST 节点类型和语法种类（SyntaxKind）。
-  - `index.ts`: 统一导出。
-- `tests/`: 包含针对 Scanner 和 Parser 的单元测试。
-- `docs/`: 文档目录，包含语法定义。
+  - `compiler.ts`: 编译器入口，串联整个编译流程
+  - `scanner.ts`: 词法分析器
+  - `parser.ts`: 语法分析器
+  - `binder.ts`: 语义绑定与作用域分析
+  - `transformer.ts`: AST 转换器框架
+  - `transformers/`: 内置转换插件 (死代码消除、常量折叠)
+  - `emitter.ts`: 代码生成器
+  - `sourcemap.ts`: Source Map 生成逻辑
+  - `ast.ts`: AST 节点定义
+  - `factory.ts`: AST 节点创建工厂
+  - `index.ts`: 统一导出
+- `tests/`: 单元测试
 
 ## License
 

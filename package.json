@@ -13,7 +13,7 @@
     "test:run": "vitest --run",
     "build": "rolldown -c rolldown.config.ts",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "lint:fix": "oxlint --fix --deny-warnings",
     "lint:github": "oxlint --format=github",
     "fmt": "oxfmt --write",
     "fmt:check": "oxfmt --check",

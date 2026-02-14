@@ -110,3 +110,14 @@ export const enum CharacterCodes {
   tab = 9, // \t
   verticalTab = 11, // \v
 }
+
+export const enum ErrorKind {
+  NotExpectToken,
+  MissingSymbol,
+  InvalidExpression,
+  InvalidIdentifier,
+  InvalidFunctionIdentifier,
+  InvalidFunctionParameter,
+  InvalidObjectPropertyIdentifier,
+  ReturnOutsideFunction,
+}
